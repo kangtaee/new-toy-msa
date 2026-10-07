@@ -1,6 +1,5 @@
 server:
-#  port: 8082
-  port: 0
+  port: 8082
 
 spring:
   application:
@@ -14,5 +13,4 @@ eureka:
       defaultZone: http://localhost:8761/eureka
   instance:
     instance-id: ${spring.cloud.client.ip-address}:${spring.application.instance_id:${random.value}}
-    prefer-ip-address: true
-
+    prefer-ip-address: true # 호스트명 대신 IP로 등록
