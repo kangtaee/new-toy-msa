@@ -1,0 +1,9 @@
+spring:
+  config:
+    activate:
+      on-profile: native
+  cloud:
+    config:
+      server:
+        native:
+          search-locations: file:///C:/lg6th/native-file-repo

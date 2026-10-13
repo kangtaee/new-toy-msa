@@ -1,5 +1,5 @@
 server:
-  port: 8000
+  port: 8080
 
 eureka:
   client:
@@ -8,13 +8,18 @@ eureka:
     service-url:
       defaultZone: http://localhost:8761/eureka
   instance:
-    #    instance-id: ${spring.cloud.client.ip-address}:${spring.application.instance_id:${random.value}}
+#    instance-id: ${spring.cloud.client.ip-address}:${spring.application.instance_id:${random.value}}
     instance-id: ${spring.application.name}:${spring.cloud.client.ip-address}:${server.port}
     prefer-ip-address: true
 
 spring:
   application:
     name: apigateway-service
+  rabbitmq:
+    host: 127.0.0.1
+    port: 5672
+    username: guest
+    password: guest
   cloud:
     gateway:
       server:
@@ -26,10 +31,40 @@ spring:
                 preLogger: true
                 postLogger: true
           routes:
+            - id: user-service-register
+              uri: lb://USER-SERVICE
+              predicates:
+                - Path=/user-service/users
+                - Method=POST
+              filters:
+                - RemoveRequestHeader=Cookie
+                - RewritePath=/user-service/(?<segment>.*), /$\{segment}
+            - id: user-service-login
+              uri: lb://USER-SERVICE
+              predicates:
+                - Path=/user-service/login
+                - Method=POST
+              filters:
+                - RemoveRequestHeader=Cookie
+                - RewritePath=/user-service/(?<segment>.*), /$\{segment}
+            # Spring Cloud Bus + Actuator 추가 (인증 없이 통과)
+            - id: user-service-actuator
+              uri: lb://USER-SERVICE
+              predicates:
+                - Path=/user-service/actuator/**
+                - Method=GET,POST
+              filters:
+                - RemoveRequestHeader=Cookie
+                - RewritePath=/user-service/(?<segment>.*), /$\{segment}
             - id: user-service
               uri: lb://USER-SERVICE
               predicates:
                 - Path=/user-service/**
+                - Method=GET
+              filters:
+                - RemoveRequestHeader=Cookie
+                - RewritePath=/user-service/(?<segment>.*), /$\{segment}
+                - AuthorizationHeaderFilter
             - id: catalog-service
               uri: lb://CATALOG-SERVICE
               predicates:
@@ -59,3 +94,18 @@ spring:
                     baseMessage: Hi, there.
                     preLogger: true
                     postLogger: true
+
+#token:
+#  secret: my-very-long-secret-key-1234567890123456
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include:
+          - refresh
+          - health
+          - beans
+          - info
+          - httpexchanges
+          - busrefresh

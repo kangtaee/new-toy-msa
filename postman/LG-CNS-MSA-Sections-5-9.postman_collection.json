@@ -1,0 +1,392 @@
+{
+  "info": {
+    "_postman_id": "7c5d0fb8-52ce-4dbd-a33d-6ef1df293cf7",
+    "name": "LG CNS MSA - Sections 5-9 Practice",
+    "description": "강의 Section 5~9 실습용 컬렉션. 권장 순서: 7-1 회원가입 -> 7-2 로그인 -> 사용자/상품/주문 요청 -> Config/Bus 요청. 로그인 성공 시 Token과 UserId가 자동 저장됩니다.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Section 5. Users Microservice Part 1",
+      "item": [
+        {
+          "name": "5-1. 회원가입 - User Service 직접 호출",
+          "event": [{
+            "listen": "test",
+            "script": {"type": "text/javascript", "exec": [
+              "pm.test(\"201 Created\", () => pm.response.to.have.status(201));",
+              "const data = pm.response.json();",
+              "if (data.userId) pm.collectionVariables.set(\"userId\", data.userId);"
+            ]}
+          }],
+          "request": {
+            "auth": {"type": "noauth"},
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"{{name}}\",\n  \"email\": \"{{email}}\",\n  \"pwd\": \"{{password}}\"\n}",
+              "options": {"raw": {"language": "json"}}
+            },
+            "url": "{{userServiceUrl}}/users",
+            "description": "Section 5의 User Service 직접 회원가입 실습. 현재 프로젝트의 고정 포트 8083을 사용합니다."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Section 6. Catalogs & Orders Microservice",
+      "item": [
+        {
+          "name": "6-1. 회원가입 - Gateway",
+          "event": [{
+            "listen": "test",
+            "script": {"type": "text/javascript", "exec": [
+              "pm.test(\"201 Created\", () => pm.response.to.have.status(201));",
+              "const data = pm.response.json();",
+              "if (data.userId) pm.collectionVariables.set(\"userId\", data.userId);"
+            ]}
+          }],
+          "request": {
+            "auth": {"type": "noauth"},
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"{{name}}\",\n  \"email\": \"{{email}}\",\n  \"pwd\": \"{{password}}\"\n}",
+              "options": {"raw": {"language": "json"}}
+            },
+            "url": "{{baseUrl}}/user-service/users",
+            "description": "API Gateway를 통한 회원가입. Authorization은 No Auth입니다."
+          },
+          "response": []
+        },
+        {
+          "name": "6-2. 전체 사용자 조회 - Gateway",
+          "request": {
+            "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{token}}", "type": "string"}]},
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/user-service/users",
+            "description": "Section 6 요청. 현재 코드는 Section 7 JWT까지 적용되어 있어 먼저 7-2 로그인을 실행해야 합니다."
+          },
+          "response": []
+        },
+        {
+          "name": "6-3. 사용자 상세 조회 - Gateway",
+          "request": {
+            "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{token}}", "type": "string"}]},
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/user-service/users/{{userId}}",
+            "description": "로그인에서 저장된 Token과 UserId를 사용합니다."
+          },
+          "response": []
+        },
+        {
+          "name": "6-4. 상품 목록 조회",
+          "request": {
+            "auth": {"type": "noauth"},
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/catalog-service/catalogs",
+            "description": "Catalog Service의 전체 상품 목록을 조회합니다."
+          },
+          "response": []
+        },
+        {
+          "name": "6-5. 주문 등록",
+          "request": {
+            "auth": {"type": "noauth"},
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": \"{{productId}}\",\n  \"qty\": {{qty}},\n  \"unitPrice\": {{unitPrice}}\n}",
+              "options": {"raw": {"language": "json"}}
+            },
+            "url": "{{baseUrl}}/order-service/{{userId}}/orders",
+            "description": "강의 예제값: CATALOG-002, 수량 100, 단가 1100."
+          },
+          "response": []
+        },
+        {
+          "name": "6-6. 주문 목록 조회",
+          "request": {
+            "auth": {"type": "noauth"},
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/order-service/{{userId}}/orders",
+            "description": "해당 UserId의 주문 목록을 조회합니다."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Section 7. Login & JWT",
+      "item": [
+        {
+          "name": "7-1. 회원가입 - No Auth",
+          "event": [{
+            "listen": "test",
+            "script": {"type": "text/javascript", "exec": [
+              "pm.test(\"201 Created\", () => pm.response.to.have.status(201));",
+              "const data = pm.response.json();",
+              "if (data.userId) pm.collectionVariables.set(\"userId\", data.userId);"
+            ]}
+          }],
+          "request": {
+            "auth": {"type": "noauth"},
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"{{name}}\",\n  \"email\": \"{{email}}\",\n  \"pwd\": \"{{password}}\"\n}",
+              "options": {"raw": {"language": "json"}}
+            },
+            "url": "{{baseUrl}}/user-service/users",
+            "description": "강의 Section 7 회원가입. Authorization은 No Auth입니다."
+          },
+          "response": []
+        },
+        {
+          "name": "7-2. 로그인 - Token/UserId 자동 저장",
+          "event": [{
+            "listen": "test",
+            "script": {"type": "text/javascript", "exec": [
+              "pm.test(\"로그인 성공\", () => pm.expect(pm.response.code).to.be.oneOf([200, 204]));",
+              "const token = pm.response.headers.get(\"Token\") || pm.response.headers.get(\"token\");",
+              "const userId = pm.response.headers.get(\"UserId\") || pm.response.headers.get(\"userId\");",
+              "pm.test(\"Token 헤더 확인\", () => pm.expect(token).to.be.ok);",
+              "pm.test(\"UserId 헤더 확인\", () => pm.expect(userId).to.be.ok);",
+              "if (token) pm.collectionVariables.set(\"token\", token);",
+              "if (userId) pm.collectionVariables.set(\"userId\", userId);"
+            ]}
+          }],
+          "request": {
+            "auth": {"type": "noauth"},
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{email}}\",\n  \"password\": \"{{password}}\"\n}",
+              "options": {"raw": {"language": "json"}}
+            },
+            "url": "{{baseUrl}}/user-service/login",
+            "description": "성공하면 응답 Headers의 Token과 UserId를 컬렉션 변수에 자동 저장합니다."
+          },
+          "response": []
+        },
+        {
+          "name": "7-3. Health Check - No Auth로 401 확인",
+          "event": [{
+            "listen": "test",
+            "script": {"type": "text/javascript", "exec": [
+              "pm.test(\"인증 없이 401\", () => pm.response.to.have.status(401));"
+            ]}
+          }],
+          "request": {
+            "auth": {"type": "noauth"},
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/user-service/health-check",
+            "description": "Bearer Token 없이 요청해 401 Unauthorized가 나오는지 확인합니다."
+          },
+          "response": []
+        },
+        {
+          "name": "7-4. 전체 사용자 조회 - Bearer Token",
+          "request": {
+            "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{token}}", "type": "string"}]},
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/user-service/users",
+            "description": "7-2 로그인에서 저장한 JWT를 자동 사용합니다."
+          },
+          "response": []
+        },
+        {
+          "name": "7-5. 사용자 상세 조회 - Bearer Token",
+          "request": {
+            "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{token}}", "type": "string"}]},
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/user-service/users/{{userId}}",
+            "description": "저장된 JWT와 UserId로 사용자 상세 정보를 조회합니다."
+          },
+          "response": []
+        },
+        {
+          "name": "7-6. Health Check - Bearer Token",
+          "event": [{
+            "listen": "test",
+            "script": {"type": "text/javascript", "exec": [
+              "pm.test(\"Bearer 인증 성공\", () => pm.response.to.have.status(200));"
+            ]}
+          }],
+          "request": {
+            "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{token}}", "type": "string"}]},
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/user-service/health-check",
+            "description": "저장된 JWT를 사용해 200 OK를 확인합니다."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Sections 8-9. Config Server & Spring Cloud Bus",
+      "item": [
+        {
+          "name": "8-1. Config Server 설정 확인",
+          "request": {
+            "auth": {"type": "noauth"},
+            "method": "GET",
+            "header": [],
+            "url": "{{configServerUrl}}/ecommerce/default",
+            "description": "Config Server가 외부 저장소의 ecommerce 기본 프로필을 읽는지 확인합니다."
+          },
+          "response": []
+        },
+        {
+          "name": "8-2. Config Server 개발 프로필 확인",
+          "request": {
+            "auth": {"type": "noauth"},
+            "method": "GET",
+            "header": [],
+            "url": "{{configServerUrl}}/ecommerce/dev",
+            "description": "ecommerce.yml과 ecommerce-dev.yml이 함께 적용되는지 확인합니다."
+          },
+          "response": []
+        },
+        {
+          "name": "8-3. User Service 외부 설정 확인",
+          "request": {
+            "auth": {"type": "noauth"},
+            "method": "GET",
+            "header": [],
+            "url": "{{userServiceUrl}}/health-check",
+            "description": "응답에서 gateway.ip, token.secret, token.expiration-time이 Config Server 값으로 표시되는지 확인합니다."
+          },
+          "response": []
+        },
+        {
+          "name": "8-4. User Service Actuator Refresh",
+          "request": {
+            "auth": {"type": "noauth"},
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {"raw": {"language": "json"}}
+            },
+            "url": "{{userServiceUrl}}/actuator/refresh",
+            "description": "ecommerce.yml을 수정하고 로컬 Git에 커밋한 뒤 빈 JSON 객체를 전송합니다. 변경된 설정 키 목록이 반환됩니다."
+          },
+          "response": []
+        },
+        {
+          "name": "9-1. Bus Refresh - Gateway",
+          "event": [{
+            "listen": "test",
+            "script": {"type": "text/javascript", "exec": [
+              "pm.test(\"204 No Content\", () => pm.response.to.have.status(204));"
+            ]}
+          }],
+          "request": {
+            "auth": {"type": "noauth"},
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {"raw": {"language": "json"}}
+            },
+            "url": "{{baseUrl}}/actuator/busrefresh",
+            "description": "현재 Spring Boot 버전에서는 raw JSON 본문 {}를 전송합니다. 정상 응답은 204 No Content입니다."
+          },
+          "response": []
+        },
+        {
+          "name": "9-2. Bus Refresh - User Service via Gateway",
+          "event": [{
+            "listen": "test",
+            "script": {"type": "text/javascript", "exec": [
+              "pm.test(\"204 No Content\", () => pm.response.to.have.status(204));"
+            ]}
+          }],
+          "request": {
+            "auth": {"type": "noauth"},
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {"raw": {"language": "json"}}
+            },
+            "url": "{{baseUrl}}/user-service/actuator/busrefresh",
+            "description": "강의 35페이지와 동일하게 Gateway를 통해 User Service의 Bus Refresh를 호출합니다."
+          },
+          "response": []
+        },
+        {
+          "name": "9-3. Bus Refresh - User Service 직접 호출",
+          "event": [{
+            "listen": "test",
+            "script": {"type": "text/javascript", "exec": [
+              "pm.test(\"204 No Content\", () => pm.response.to.have.status(204));"
+            ]}
+          }],
+          "request": {
+            "auth": {"type": "noauth"},
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {"raw": {"language": "json"}}
+            },
+            "url": "{{userServiceUrl}}/actuator/busrefresh",
+            "description": "User Service 고정 포트로 직접 Bus Refresh를 호출합니다."
+          },
+          "response": []
+        },
+        {
+          "name": "9-4. Bus Refresh 후 Health Check",
+          "event": [{
+            "listen": "test",
+            "script": {"type": "text/javascript", "exec": [
+              "pm.test(\"변경된 설정 확인 성공\", () => pm.response.to.have.status(200));",
+              "pm.test(\"token 설정이 응답에 포함됨\", () => pm.expect(pm.response.text()).to.include(\"token secret key=\"));"
+            ]}
+          }],
+          "request": {
+            "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{token}}", "type": "string"}]},
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/user-service/health-check",
+            "description": "9-1 실행 후, 변경된 Config 값이 User Service에 전파되었는지 확인합니다. token.secret을 변경했다면 기존 JWT는 무효이므로 7-2에서 다시 로그인한 뒤 실행합니다."
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {"key": "baseUrl", "value": "http://localhost:8000"},
+    {"key": "userServiceUrl", "value": "http://localhost:8083"},
+    {"key": "configServerUrl", "value": "http://localhost:8888"},
+    {"key": "name", "value": "테스트 사용자"},
+    {"key": "email", "value": "test@google.com"},
+    {"key": "password", "value": "test1234"},
+    {"key": "productId", "value": "CATALOG-002"},
+    {"key": "qty", "value": "100"},
+    {"key": "unitPrice", "value": "1100"},
+    {"key": "token", "value": ""},
+    {"key": "userId", "value": ""}
+  ]
+}

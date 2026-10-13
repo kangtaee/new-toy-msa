@@ -1,0 +1,251 @@
+{
+  "info": {
+    "_postman_id": "42813019-4ec9-45b2-a6f8-e162baaa8000",
+    "name": "LG CNS MSA - Config & Bus Practice",
+    "description": "User Service 로그인/JWT와 Spring Cloud Config/Bus 실습용 컬렉션입니다. 권장 실행 순서: 회원가입 -> 로그인 -> Health Check -> 설정 변경 -> Bus Refresh -> 이전 토큰 확인 -> 다시 로그인 -> Health Check.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "1. User Service",
+      "item": [
+        {
+          "name": "1-1. 회원가입",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{email}}\",\n  \"pwd\": \"{{password}}\",\n  \"name\": \"테스트 사용자\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/user-service/users",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "user-service",
+                "users"
+              ]
+            },
+            "description": "H2 메모리 DB는 User Service를 재실행하면 초기화되므로 로그인 전에 다시 실행할 수 있습니다."
+          },
+          "response": []
+        },
+        {
+          "name": "1-2. 로그인 - Token 자동 저장",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"로그인 성공\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 204]);",
+                  "});",
+                  "",
+                  "const token = pm.response.headers.get(\"Token\") || pm.response.headers.get(\"token\");",
+                  "const userId = pm.response.headers.get(\"UserId\") || pm.response.headers.get(\"userId\");",
+                  "",
+                  "pm.test(\"Token 응답 헤더 확인\", function () {",
+                  "    pm.expect(token, \"Token 헤더가 없습니다\").to.be.ok;",
+                  "});",
+                  "",
+                  "if (token) pm.collectionVariables.set(\"token\", token);",
+                  "if (userId) pm.collectionVariables.set(\"userId\", userId);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{email}}\",\n  \"password\": \"{{password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/user-service/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "user-service",
+                "login"
+              ]
+            },
+            "description": "성공하면 응답 Headers의 Token과 UserId를 컬렉션 변수에 자동 저장합니다."
+          },
+          "response": []
+        },
+        {
+          "name": "1-3. Health Check - 저장된 Token 사용",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/user-service/health-check",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "user-service",
+                "health-check"
+              ]
+            },
+            "description": "로그인 요청에서 저장된 JWT를 Bearer Token으로 자동 사용합니다."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "2. Config Server & Spring Cloud Bus",
+      "item": [
+        {
+          "name": "2-1. Config Server 설정 확인",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{configServerUrl}}/ecommerce/default",
+              "host": [
+                "{{configServerUrl}}"
+              ],
+              "path": [
+                "ecommerce",
+                "default"
+              ]
+            },
+            "description": "외부 설정 저장소의 ecommerce 기본 프로필을 Config Server가 읽는지 확인합니다."
+          },
+          "response": []
+        },
+        {
+          "name": "2-2. Bus Refresh - Gateway에서 전체 전파",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Bus Refresh 성공\", function () {",
+                  "    pm.expect(pm.response.code).to.eql(204);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/actuator/busrefresh",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "actuator",
+                "busrefresh"
+              ]
+            },
+            "description": "Body 없이 전송합니다. 성공 응답은 204 No Content입니다. RabbitMQ와 Bus 설정이 완료된 뒤 사용할 수 있습니다."
+          },
+          "response": []
+        },
+        {
+          "name": "2-3. Bus Refresh - User Service 직접 호출",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Bus Refresh 성공\", function () {",
+                  "    pm.expect(pm.response.code).to.eql(204);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{userServiceUrl}}/actuator/busrefresh",
+              "host": [
+                "{{userServiceUrl}}"
+              ],
+              "path": [
+                "actuator",
+                "busrefresh"
+              ]
+            },
+            "description": "Gateway 자체 endpoint를 사용하지 않을 때 User Service의 고정 포트로 직접 호출하는 요청입니다."
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8000"
+    },
+    {
+      "key": "userServiceUrl",
+      "value": "http://localhost:8083"
+    },
+    {
+      "key": "configServerUrl",
+      "value": "http://localhost:8888"
+    },
+    {
+      "key": "email",
+      "value": "test@google.com"
+    },
+    {
+      "key": "password",
+      "value": "test1234"
+    },
+    {
+      "key": "token",
+      "value": ""
+    },
+    {
+      "key": "userId",
+      "value": ""
+    }
+  ]
+}
