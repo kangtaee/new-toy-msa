@@ -34,8 +34,6 @@ public class WebSecurity {
 
     @Bean
     protected SecurityFilterChain configure(HttpSecurity http) throws Exception {
-        String gatewayIp = env.getProperty("gateway.ip", "172.31.96.1");
-
         AuthenticationManagerBuilder authenticationManagerBuilder =
                 http.getSharedObject(AuthenticationManagerBuilder.class);
         authenticationManagerBuilder.userDetailsService(userService).passwordEncoder(bCryptPasswordEncoder);
@@ -51,7 +49,7 @@ public class WebSecurity {
                     .requestMatchers("/**").access( // **(모든 경로)에 대해 지정한 IP에서 온 요청만 허용하고 다른 IP에서 오면 403으로 거절
                             new WebExpressionAuthorizationManager( // 보통 단일 진입점인 API Gateway의 IP 주소만 지정
                                     "hasIpAddress('127.0.0.1') or hasIpAddress('::1') or " +
-                                    "hasIpAddress('" + gatewayIp + "')")) // host pc ip address (해당하는 IP 주소만 접근을 허용)
+                                    "hasIpAddress('172.20.0.1')")) // host pc ip address (해당하는 IP 주소만 접근을 허용)
                                     // 터미널 실행 ->
                                     // Windows: ipconfig -> 무선 LAN 어댑터 Wi-Fi 또는 이더넷 어댑터 vEthernet 주소 복사해오기
                                     // macOS: ifconfig -> en0의 inet 주소 복사해오기

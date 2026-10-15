@@ -1,7 +1,8 @@
 package com.example.apigatewayservice.filter;
 
+import io.jsonwebtoken.JwtParser;
 import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.security.Keys;
+import io.jsonwebtoken.SignatureAlgorithm;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cloud.gateway.filter.GatewayFilter;
 import org.springframework.cloud.gateway.filter.factory.AbstractGatewayFilterFactory;
@@ -17,12 +18,14 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import javax.crypto.SecretKey;
+import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 
 @Component
 @Slf4j
 public class AuthorizationHeaderFilter extends AbstractGatewayFilterFactory<AuthorizationHeaderFilter.Config> {
-    private final Environment env;
+    Environment env;
 
     public AuthorizationHeaderFilter(Environment env) {
         super(Config.class);
@@ -38,13 +41,16 @@ public class AuthorizationHeaderFilter extends AbstractGatewayFilterFactory<Auth
         return (exchange, chain) -> {
             ServerHttpRequest request = exchange.getRequest();
 
-            String authorizationHeader = request.getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
-            if (authorizationHeader == null || authorizationHeader.isBlank()) {
+            // 1. Authorization 헤더가 존재하는지 존재하지 않는지를 먼저 검증
+            if (!request.getHeaders().containsKey(HttpHeaders.AUTHORIZATION)) {
                 return onError(exchange, "No authorization header", HttpStatus.UNAUTHORIZED);
             }
 
+            // 2. 헤더가 존재한다면, JWT 토큰이 실제로 존재하는지를 검증
+            String authorizationHeader = request.getHeaders().get(HttpHeaders.AUTHORIZATION).get(0);
             String jwt = authorizationHeader.replace("Bearer ", "");
 
+            // 3. 토큰이 존재한다면, JWT라는 토큰이 우리가 발했했던 토큰이 맞는지, 유효시간 안에 사용할 수 있는 정상적인 토큰인지 검증
             if (!isJwtValid(jwt)) {
                 return onError(exchange, "JWT token is not valid", HttpStatus.UNAUTHORIZED);
             }
@@ -64,24 +70,27 @@ public class AuthorizationHeaderFilter extends AbstractGatewayFilterFactory<Auth
     }
 
     private boolean isJwtValid(String jwt) {
-        String secret = env.getProperty("token.secret");
-        if (secret == null || secret.isBlank() || jwt.isBlank()) {
-            return false;
-        }
+        byte[] secretKeyBytes = env.getProperty("token.secret").getBytes();
+        SecretKey signingKey = new SecretKeySpec(secretKeyBytes, SignatureAlgorithm.HS512.getJcaName());
 
-        SecretKey signingKey = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
+        boolean returnValue = true;
+        String subject = null;
 
         try {
-            String subject = Jwts.parser()
-                    .verifyWith(signingKey)
-                    .build()
-                    .parseSignedClaims(jwt)
-                    .getPayload()
-                    .getSubject();
-            return subject != null && !subject.isBlank();
-        } catch (Exception exception) {
-            return false;
+            JwtParser jwtParser = Jwts.parser()
+                    .setSigningKey(signingKey)
+                    .build();
+
+            subject = jwtParser.parseClaimsJws(jwt).getBody().getSubject(); // userId
+        } catch (Exception ex) {
+            returnValue = false;
         }
+
+        if (subject == null || subject.isEmpty()) {
+            returnValue = false;
+        }
+
+        return returnValue;
     }
 
 }
